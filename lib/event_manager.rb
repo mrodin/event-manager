@@ -4,6 +4,10 @@ require 'erb'
 
 Sunlight::Congress.api_key = 'e179a6973728c4dd3fb1204283aaccb5'
 
+def convert_date(date_str)
+  DateTime.strptime(date_str, '%m/%d/%y %H:%M')
+end
+
 def clean_phone_number(number)
   raw_number = number.gsub(/\D/, '')
 
@@ -32,6 +36,15 @@ def save_thank_you_letters(id, form_letter)
   end
 end
 
+def count_date_values(date_value, target_hash)
+  if target_hash.has_key?(date_value)
+    target_hash[date_value] += 1
+  else
+    target_hash[date_value] = 1
+  end
+  target_hash
+end
+
 puts 'EventManager Initialized!'
 
 contents = CSV.open 'event_attendees.csv', headers: true, header_converters: :symbol
@@ -39,11 +52,17 @@ contents = CSV.open 'event_attendees.csv', headers: true, header_converters: :sy
 template_letter = File.read 'form_letter.erb'
 erb_template = ERB.new template_letter
 
+reg_hours = Hash.new
+
 contents.each do |row|
   id = row[0]
+  date = convert_date(row[:regdate])
   name = row[:first_name]
   phone = clean_phone_number(row[:homephone])
   zipcode = clean_zipcode(row[:zipcode])
+
+  count_date_values(date.hour, reg_hours)
+
   legislators = legislators_by_zipcode(zipcode)
 
   form_letter = erb_template.result(binding)
@@ -51,3 +70,6 @@ contents.each do |row|
   puts "#{id} #{name} #{zipcode} #{phone}"
   save_thank_you_letters(id, form_letter)
 end
+
+busiest_hour = reg_hours.max_by { |k, v| v }[0]
+puts "Busiest registration hour is #{busiest_hour}."
