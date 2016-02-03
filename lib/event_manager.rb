@@ -8,6 +8,10 @@ def convert_date(date_str)
   DateTime.strptime(date_str, '%m/%d/%y %H:%M')
 end
 
+def get_weekday_name(date_str)
+  convert_date(date_str).strftime('%A')
+end
+
 def clean_phone_number(number)
   raw_number = number.gsub(/\D/, '')
 
@@ -53,15 +57,18 @@ template_letter = File.read 'form_letter.erb'
 erb_template = ERB.new template_letter
 
 reg_hours = Hash.new
+reg_days = Hash.new
 
 contents.each do |row|
   id = row[0]
   date = convert_date(row[:regdate])
+  weekday = get_weekday_name(row[:regdate])
   name = row[:first_name]
   phone = clean_phone_number(row[:homephone])
   zipcode = clean_zipcode(row[:zipcode])
 
   count_date_values(date.hour, reg_hours)
+  count_date_values(weekday, reg_days)
 
   legislators = legislators_by_zipcode(zipcode)
 
@@ -73,3 +80,6 @@ end
 
 busiest_hour = reg_hours.max_by { |k, v| v }[0]
 puts "Busiest registration hour is #{busiest_hour}."
+
+busiest_day = reg_days.max_by { |k, v| v }[0]
+puts "Busiest registration day is #{busiest_day}."
